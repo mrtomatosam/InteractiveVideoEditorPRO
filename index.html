@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Interactive Video Editor PRO - v16</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background: #0f0f0f; color: #eee; padding: 20px; margin: 0; }
+        .container { max-width: 1300px; margin: 0 auto; background: #1a1a1a; border-radius: 12px; overflow: hidden; border: 1px solid #333; }
+        
+        .toolbar { background: #222; padding: 15px 25px; display: flex; gap: 15px; border-bottom: 2px solid #333; align-items: center; }
+        .status-badge { background: #333; padding: 5px 12px; border-radius: 20px; font-size: 0.8em; color: #007bff; border: 1px solid #007bff; }
+        
+        .tabs { display: flex; background: #111; border-bottom: 2px solid #333; }
+        .tab { flex: 1; padding: 15px; border: none; background: none; color: #666; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .tab.active { color: #fff; border-bottom: 3px solid #007bff; background: #1a1a1a; }
+        
+        .content { padding: 25px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .video-wrapper { position: relative; width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 8px; overflow: hidden; border: 2px solid #333; }
+        video { width: 100%; height: 100%; }
+        #gameOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; padding: 20px; text-align: center; }
+        #gameOverlay.show { display: flex; }
+
+        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.9em; transition: 0.2s; }
+        .btn-blue { background: #007bff; color: white; }
+        .btn-green { background: #28a745; color: white; }
+        .btn-orange { background: #fd7e14; color: white; }
+        .btn-red { background: #dc3545; color: white; }
+        
+        .field { margin-bottom: 15px; }
+        .field label { display: block; margin-bottom: 6px; font-size: 0.85em; color: #999; }
+        .field input, .field textarea { width: 100%; padding: 12px; background: #252525; border: 1px solid #444; color: white; border-radius: 6px; }
+        
+        .choices-panel { background: #222; padding: 20px; border-radius: 8px; border: 1px solid #333; margin: 20px 0; }
+        .choice-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; }
+        .choice-box { background: #2a2a2a; padding: 10px; border-radius: 6px; border: 1px solid #444; }
+        
+        .scene-card { background: #252525; padding: 12px 20px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 1px solid transparent; }
+        .scene-card:hover { border-color: #007bff; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="toolbar">
+        <div style="flex:1"><strong>Project:</strong> <span id="videoStatus" class="status-badge">No video loaded</span></div>
+        <button class="btn btn-orange" onclick="saveProjectJSON()">💾 Save Project</button>
+        <button class="btn btn-blue" onclick="document.getElementById('fileLoader').click()">📂 Open Project</button>
+        <input type="file" id="fileLoader" style="display:none" accept=".json" onchange="loadProjectJSON(this)">
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" onclick="setTab(0)">1. EDIT SCENE</button>
+        <button class="tab" onclick="setTab(1)">2. TEST PLAY</button>
+        <button class="tab" onclick="setTab(2)">3. EXPORT</button>
+    </div>
+
+    <div class="content">
+        <div id="t0" class="tab-content active">
+            <div class="field">
+                <label>Load Video File:</label>
+                <input type="file" id="videoInput" accept="video/*" onchange="handleVideoSelection(this)">
+            </div>
+            <div class="video-wrapper"><video id="vEdit" controls></video></div>
+            
+            <div style="margin: 20px 0; display: flex; gap: 10px; justify-content: center;">
+                <button class="btn btn-blue" onclick="setPoint('start')">⏱️ Set Start: <span id="ts">0.0</span>s</button>
+                <button class="btn btn-blue" onclick="setPoint('end')">⏱️ Set End: <span id="te">0.0</span>s</button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="field"><label>Scene ID (Unique):</label><input type="text" id="inID" placeholder="e.g. intro_01"></div>
+                <div class="field"><label>Screen Question:</label><input type="text" id="inTitle" placeholder="What should the player do?"></div>
+            </div>
+
+            <div class="choices-panel">
+                <label style="color:#007bff; font-weight:bold;">CHOICE BUTTONS (Optional - Max 5)</label>
+                <div class="choice-grid" id="choiceGrid">
+                    <script>
+                        for(let i=1; i<=5; i++){
+                            document.write(`
+                                <div class="choice-box">
+                                    <label style="font-size:10px">Button ${i}</label>
+                                    <input type="text" id="b${i}t" placeholder="Label" style="width:100%; margin-bottom:5px; background:#111; color:white; border:1px solid #444; padding:5px;">
+                                    <input type="text" id="b${i}a" placeholder="Target ID" style="width:100%; background:#111; color:white; border:1px solid #444; padding:5px;">
+                                </div>
+                            `);
+                        }
+                    </script>
+                </div>
+            </div>
+
+            <div class="field"><label>Auto-Next (If no buttons):</label><input type="text" id="inNext" placeholder="Target Scene ID"></div>
+            
+            <button class="btn btn-green" onclick="saveScene()" style="width:100%; padding:18px; font-size:1.1em;">💾 SAVE / UPDATE SCENE</button>
+            
+            <div id="list" style="margin-top:30px;"></div>
+        </div>
+
+        <div id="t1" class="tab-content">
+            <div class="video-wrapper">
+                <video id="vGame"></video>
+                <div id="gameOverlay">
+                    <h2 id="displayQ" style="color:white; margin-bottom:30px; font-size:2em;"></h2>
+                    <div id="displayBtns" style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px;"></div>
+                </div>
+            </div>
+            <button class="btn btn-green" onclick="startGame()" style="margin-top:20px; width:100%">▶ TEST FROM START</button>
+        </div>
+
+        <div id="t2" class="tab-content">
+            <div class="field">
+                <label>Online Video URL (.mp4):</label>
+                <input type="text" id="vURL" placeholder="https://your-server.com/video.mp4">
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-blue" onclick="exportCode()" style="flex:1">🎯 GENERATE HTML CODE</button>
+                <button class="btn btn-green" onclick="downloadHTML()" style="flex:1">📥 DOWNLOAD .HTML FILE</button>
+            </div>
+            <textarea id="out" readonly style="width:100%; height:300px; margin-top:20px; font-family:monospace; font-size:11px; background:#000; color:#0f0; border:1px solid #333;"></textarea>
+        </div>
+    </div>
+</div>
+
+<script>
+    let scenes = {};
+    let tStart = 0, tEnd = 0, currentVideoName = "", gameLoop;
+
+    function setTab(n) {
+        document.querySelectorAll('.tab-content').forEach((c, i) => c.classList.toggle('active', i === n));
+        document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === n));
+    }
+
+    function handleVideoSelection(el) {
+        if(!el.files[0]) return;
+        currentVideoName = el.files[0].name;
+        document.getElementById('videoStatus').innerText = currentVideoName;
+        const url = URL.createObjectURL(el.files[0]);
+        document.getElementById('vEdit').src = url;
+        document.getElementById('vGame').src = url;
+    }
+
+    function setPoint(p) {
+        const v = document.getElementById('vEdit');
+        if(p === 'start') { tStart = v.currentTime; document.getElementById('ts').innerText = tStart.toFixed(2); }
+        else { tEnd = v.currentTime; document.getElementById('te').innerText = tEnd.toFixed(2); }
+    }
+
+    function saveScene() {
+        const id = document.getElementById('inID').value.trim();
+        if(!id) return alert("ID is required");
+
+        scenes[id] = {
+            q: document.getElementById('inTitle').value,
+            s: tStart, e: tEnd,
+            next: document.getElementById('inNext').value.trim(),
+            opts: []
+        };
+
+        for(let i=1; i<=5; i++) {
+            const txt = document.getElementById(`b${i}t`).value;
+            const trg = document.getElementById(`b${i}a`).value;
+            if(txt) scenes[id].opts.push({t: txt, a: trg});
+        }
+
+        clearFields();
+        renderList();
+    }
+
+    function renderList() {
+        const container = document.getElementById('list');
+        container.innerHTML = "<strong>Project Scenes:</strong><br><br>";
+        Object.keys(scenes).forEach(id => {
+            const card = document.createElement('div');
+            card.className = 'scene-card';
+            card.innerHTML = `<span>ID: <strong>${id}</strong></span>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-blue" onclick="editScene('${id}')">✏️ Edit</button>
+                    <button class="btn btn-red" onclick="deleteScene('${id}')">🗑️</button>
+                </div>`;
+            container.appendChild(card);
+        });
+    }
+
+    function editScene(id) {
+        const s = scenes[id];
+        document.getElementById('inID').value = id;
+        document.getElementById('inTitle').value = s.q || "";
+        document.getElementById('inNext').value = s.next || "";
+        for(let i=1; i<=5; i++) {
+            document.getElementById(`b${i}t`).value = s.opts[i-1]?.t || "";
+            document.getElementById(`b${i}a`).value = s.opts[i-1]?.a || "";
+        }
+        tStart = s.s; tEnd = s.e;
+        document.getElementById('ts').innerText = tStart.toFixed(2);
+        document.getElementById('te').innerText = tEnd.toFixed(2);
+        if(document.getElementById('vEdit').src) document.getElementById('vEdit').currentTime = tStart;
+        setTab(0);
+    }
+
+    function deleteScene(id) { if(confirm("Delete scene?")) { delete scenes[id]; renderList(); } }
+
+    function clearFields() {
+        document.getElementById('inID').value = ""; document.getElementById('inTitle').value = "";
+        for(let i=1; i<=5; i++){ document.getElementById(`b${i}t`).value=""; document.getElementById(`b${i}a`).value=""; }
+        document.getElementById('inNext').value = "";
+    }
+
+    function saveProjectJSON() {
+        const data = { videoName: currentVideoName, scenes: scenes };
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'}));
+        a.download = "interactive_project.json"; a.click();
+    }
+
+    function loadProjectJSON(input) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const data = JSON.parse(e.target.result);
+            scenes = data.scenes || data;
+            currentVideoName = data.videoName || "";
+            renderList();
+            alert("Project loaded. Please reload video file: " + currentVideoName);
+            document.getElementById('videoStatus').innerText = "LOAD VIDEO: " + currentVideoName;
+        };
+        reader.readAsText(input.files[0]);
+    }
+
+    function startGame() { playScene(Object.keys(scenes)[0]); }
+
+    function playScene(id) {
+        const s = scenes[id]; if(!s) return showFinalEnd();
+        const v = document.getElementById('vGame');
+        const ov = document.getElementById('gameOverlay');
+        ov.classList.remove('show');
+        clearInterval(gameLoop);
+        v.currentTime = s.s; v.play();
+        gameLoop = setInterval(() => {
+            if(v.currentTime >= s.e) {
+                v.pause(); clearInterval(gameLoop);
+                if(s.next && s.opts.length === 0) playScene(s.next);
+                else if(s.opts.length > 0) renderGameUI(s);
+                else showFinalEnd();
+            }
+        }, 50);
+    }
+
+    function renderGameUI(s) {
+        const ov = document.getElementById('gameOverlay');
+        const box = document.getElementById('displayBtns');
+        document.getElementById('displayQ').innerText = s.q || "";
+        box.innerHTML = "";
+        s.opts.forEach(opt => {
+            const b = document.createElement('button');
+            b.className = 'btn btn-blue'; b.style.margin="5px"; b.innerText = opt.t;
+            b.onclick = () => playScene(opt.a); box.appendChild(b);
+        });
+        ov.classList.add('show');
+    }
+
+    function showFinalEnd() {
+        const ov = document.getElementById('gameOverlay');
+        document.getElementById('displayQ').innerText = "THE END";
+        const box = document.getElementById('displayBtns');
+        box.innerHTML = `<button class="btn btn-green" onclick="startGame()">Play Again</button>`;
+        ov.classList.add('show');
+    }
+
+    function exportCode() {
+        const videoURL = document.getElementById('vURL').value || 'video.mp4';
+        const first = Object.keys(scenes)[0];
+        const json = JSON.stringify(scenes);
+
+        const template = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Interactive Film</title><style>
+        body{margin:0;background:#000;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden}
+        .c{position:relative;width:100%;max-width:1000px;aspect-ratio:16/9;background:#000} video{width:100%;height:100%}
+        .o{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;padding:20px;text-align:center}
+        .o.a{display:flex} .btn{padding:12px 25px;margin:8px;border:none;border-radius:6px;background:#007bff;color:#fff;font-weight:bold;cursor:pointer;font-size:1.1em;transition:0.2s}
+        .btn:hover{background:#0056b3;transform:scale(1.05)} #sS{position:absolute;top:0;left:0;width:100%;height:100%;background:#111;z-index:200;display:flex;align-items:center;justify-content:center}
+        </style></head><body><div id="sS"><button class="btn" style="background:#28a745;padding:20px 40px" onclick="init()">▶ START STORY</button></div>
+        <div class="c"><video id="vid" src="${videoURL}"></video><div id="ui" class="o"><h2 id="q"></h2><div id="bs"></div></div></div>
+        <script>const sc=${json}; const v=document.getElementById('vid'); const ui=document.getElementById('ui'); let lp;
+        function init(){document.getElementById('sS').style.display='none';play('${first}')}
+        function play(id){const s=sc[id]; if(!s){renderEnd()}else{ui.classList.remove('a');v.currentTime=s.s;v.play();clearInterval(lp);
+        lp=setInterval(()=>{if(v.currentTime>=s.e){v.pause();clearInterval(lp);if(s.next&&s.opts.length==0){play(s.next)}else if(s.opts.length>0){render(s)}else{renderEnd()}}},50)}}
+        function render(s){document.getElementById('q').innerText=s.q||""; const b=document.getElementById('bs'); b.innerHTML="";
+        s.opts.forEach(o=>{const bt=document.createElement('button');bt.className='btn';bt.innerText=o.t;bt.onclick=()=>play(o.a);b.appendChild(bt)});ui.classList.add('a')}
+        function renderEnd(){document.getElementById('q').innerText="FINISH"; const b=document.getElementById('bs');
+        b.innerHTML='<button class="btn" style="background:#28a745" onclick="play(\\'${first}\\')">Play Again</button>'; ui.classList.add('a')}
+        <\/script></body></html>`;
+        document.getElementById('out').value = template;
+    }
+
+    function downloadHTML() {
+        const code = document.getElementById('out').value;
+        if(!code) return alert("Generate code first");
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([code], {type: 'text/html'})); a.download = "interactive_movie.html"; a.click();
+    }
+</script>
+</body>
+</html>
