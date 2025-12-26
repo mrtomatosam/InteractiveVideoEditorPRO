@@ -1,5 +1,5 @@
 # InteractiveVideoEditorPRO
-##Create your very own "Bandersnatch" Game
+## Create your very own "Bandersnatch" Game
 
 * Create a video with all scenes concatenated (intro, good decision, bad decision,bad decision2, etc...)
 * Use the Editor to create a .html that manages your Video-Game.
