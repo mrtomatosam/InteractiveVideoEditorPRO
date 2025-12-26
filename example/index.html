@@ -1,1 +1,18 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Interactive Film</title><style>
+        body{margin:0;background:#000;color:#fff;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden}
+        .c{position:relative;width:100%;max-width:1000px;aspect-ratio:16/9;background:#000} video{width:75%;height:100%}
+        .o{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;padding:20px;text-align:center}
+        .o.a{display:flex} .btn{padding:12px 25px;margin:8px;border:none;border-radius:6px;background:#007bff;color:#fff;font-weight:bold;cursor:pointer;font-size:1.1em;transition:0.2s}
+        .btn:hover{background:#0056b3;transform:scale(1.05)} #sS{position:absolute;top:0;left:0;width:100%;height:100%;background:#111;z-index:200;display:flex;align-items:center;justify-content:center}
+        </style></head><body><div id="sS"><button class="btn" style="background:#28a745;padding:20px 40px" onclick="init()">▶ START STORY</button></div>
+        <div class="c"><video id="vid" src="MOVIE_INDI.mp4"></video><div id="ui" class="o"><h2 id="q"></h2><div id="bs"></div></div></div>
+        <script>const sc={"start":{"q":"","s":0,"e":29.840017,"next":"pergunta","opts":[]},"pergunta":{"q":"Should I put sugar in my coffee?","s":29.76738,"e":29.912654,"next":"","opts":[{"t":"Yes","a":"yes"},{"t":"No","a":"no"}]},"yes":{"q":"","s":29.840017,"e":47.781254,"next":"larayes","opts":[]},"larayes":{"q":"","s":59.76629,"e":65.933533,"next":"end","opts":[]},"no":{"q":"","s":47.926527,"e":59.838927,"next":"larano","opts":[]},"larano":{"q":"","s":65.793992,"e":71.823964,"next":"end","opts":[]},"end":{"q":"","s":71.969237,"e":87.935667,"next":"","opts":[]}}; const v=document.getElementById('vid'); const ui=document.getElementById('ui'); let lp;
+        function init(){document.getElementById('sS').style.display='none';play('start')}
+        function play(id){const s=sc[id]; if(!s){renderEnd()}else{ui.classList.remove('a');v.currentTime=s.s;v.play();clearInterval(lp);
+        lp=setInterval(()=>{if(v.currentTime>=s.e){v.pause();clearInterval(lp);if(s.next&&s.opts.length==0){play(s.next)}else if(s.opts.length>0){render(s)}else{renderEnd()}}},50)}}
+        function render(s){document.getElementById('q').innerText=s.q||""; const b=document.getElementById('bs'); b.innerHTML="";
+        s.opts.forEach(o=>{const bt=document.createElement('button');bt.className='btn';bt.innerText=o.t;bt.onclick=()=>play(o.a);b.appendChild(bt)});ui.classList.add('a')}
+        function renderEnd(){document.getElementById('q').innerText="FINISH"; const b=document.getElementById('bs');
+        b.innerHTML='<button class="btn" style="background:#28a745" onclick="play(\'start\')">Play Again</button>'; ui.classList.add('a')}
+        </script></body></html>
 
