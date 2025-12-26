@@ -9,4 +9,5 @@
 
   Enjoy!
 
-  [Example](https://mrtomatosam.github.io/InteractiveVideoEditorPRO/example/)
+[InteractiveVideoEditorPRO](https://mrtomatosam.github.io/InteractiveVideoEditorPRO)
+[Example](https://mrtomatosam.github.io/InteractiveVideoEditorPRO/example/)
