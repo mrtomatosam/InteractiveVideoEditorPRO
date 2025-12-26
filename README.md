@@ -8,4 +8,5 @@
 * Keep in mind that you're dealing with video clips, if you don't define the clip (start-end), this part won't play.
 
   Enjoy!
-  
+
+  [Example](https://mrtomatosam.github.io/InteractiveVideoEditorPRO/example/)
